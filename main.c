@@ -1,15 +1,17 @@
 #include "circuit.h"
-#include <inttypes.h>
-#include <stdio.h>
-int main(void) {
-  circuit *circuit = init_circuit(5);
-  add_comp(circuit, "resistor1", RESISTOR, 2000);
-  add_comp(circuit, "capacitor1", CAPACITOR, 10);
-  add_comp(circuit, "indcuctor1", INDUCTOR, 5);
+#include <stdint.h>
 
-  for (size_t i = 0; i < circuit->size; ++i) {
-    printf("Name: %s, Type: %d, Value: %" PRIu32 "\n", circuit->array[i].name,
-           circuit->array[i].type, circuit->array[i].value);
-  }
+const uint32_t voltage = 5;
+
+int main(void) {
+  circuit *circuit = init_circuit(5, voltage);
+  add_comp(circuit, "resistor1", RESISTOR, 220);
+  add_comp(circuit, "resistor2", RESISTOR, 200);
+  add_comp(circuit, "resistor3", RESISTOR, 300);
+  // add_comp(circuit, "capacitor1", CAPACITOR, 10);
+  // add_comp(circuit, "indcuctor1", INDUCTOR, 5);
+  print_comps(circuit);
+  calc_circuit_info(circuit);
+  print_circuit_info(circuit);
   return 0;
 }

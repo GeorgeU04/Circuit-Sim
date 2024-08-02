@@ -18,15 +18,20 @@ typedef struct component {
 typedef struct circuit {
   uint32_t size;
   uint32_t capacity;
+  uint32_t voltage;
+  uint32_t total_resistance;
+  uint32_t total_capacitance;
+  uint32_t total_inductance;
+  float current;
+  float power;
   component *array;
 } circuit;
 
 circuit *add_comp(circuit *circuit, const char *name, comp_type type,
                   uint32_t value);
-circuit *init_circuit(uint32_t capacity);
+circuit *init_circuit(uint32_t capacity, uint32_t voltage);
 void free_circuit(circuit *circuit);
-void free_comp(component *comp);
-uint32_t calc_resistance(circuit *circuit);
-uint32_t calc_inductance(circuit *circuit);
-double calc_capacitance(circuit *comp);
+void calc_circuit_info(circuit *circuit);
+void print_comps(circuit *circuit);
+void print_circuit_info(circuit *circuit);
 #endif
