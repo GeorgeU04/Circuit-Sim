@@ -10,10 +10,9 @@ int main(void) {
   add_comp(circuit, "resistor3", RESISTOR, 300, "o");
   add_comp(circuit, "capacitor1", CAPACITOR, 10, "nf");
   add_comp(circuit, "capacitor2", CAPACITOR, 22, "nf");
-  add_comp(circuit, "capacitor2", CAPACITOR, 20, "Uf");
-  add_comp(circuit, "indcuctor2", INDUCTOR, 10, "mH");
-  add_comp(circuit, "indcuctor2", INDUCTOR, 500, "uH");
-  // add_comp(circuit, "indcuctor3", INDUCTOR, 10, "un"); test for unit check
+  add_comp(circuit, "capacitor3", CAPACITOR, 20, "Uf");
+  add_comp(circuit, "indcuctor1", INDUCTOR, 1000, "mH");
+  add_comp(circuit, "indcuctor2", INDUCTOR, 200, "H");
   calc_circuit_info(circuit);
   print_comps(circuit);
   print_circuit_info(circuit);

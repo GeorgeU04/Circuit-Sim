@@ -21,6 +21,21 @@ typedef struct component {
   char *unit;
   comp_type type;
   double value;
+  union {
+    struct {
+      double voltage_drop;
+      double power_dissipation;
+    } resistor;
+    struct {
+      double charge;
+      double voltage_across;
+      double energy_stored;
+    } capacitor;
+    struct {
+      double voltage_across;
+      double energy_stored;
+    } inductor;
+  } comp;
 } component;
 
 typedef struct circuit {
