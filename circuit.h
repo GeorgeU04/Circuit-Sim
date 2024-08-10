@@ -1,7 +1,6 @@
 #ifndef COMPONENT_H
 #define COMPONENT_H
 
-#include <stdbool.h>
 #include <stdint.h>
 
 typedef struct {
@@ -41,18 +40,20 @@ typedef struct component {
 typedef struct circuit {
   uint32_t size;
   uint32_t capacity;
-  uint32_t voltage;
+  double voltage;
   double total_resistance;
   double total_capacitance;
   double total_inductance;
   double current;
+  uint8_t voltage_type;
   double power;
   component *array;
 } circuit;
 
 circuit *add_comp(circuit *circuit, const char *name, comp_type type,
                   double value, const char *unit);
-circuit *init_circuit(uint32_t capacity, uint32_t voltage);
+circuit *init_circuit(uint32_t capacity, const double voltage,
+                      const uint8_t voltage_type);
 void free_circuit(circuit *circuit);
 void calc_circuit_info(circuit *circuit);
 void print_comps(circuit *circuit);

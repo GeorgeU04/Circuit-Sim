@@ -1,0 +1,4 @@
+5:DC
+resistor:resistor1:200:o
+capacitor:capacitor1:10:nf
+inductor:inductor1:1000:mh

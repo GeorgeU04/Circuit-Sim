@@ -1,32 +1,18 @@
 #include "circuit.h"
-#include <ctype.h>
+#include "extras.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-char *comp_names[] = {"Resistor", "Capacitor", "Inductor"};
+const char *comp_names[] = {"Resistor", "Capacitor", "Inductor"};
 
 unit_t units[] = {{"o", "Ohms", 1.0},           {"ko", "Kiloohms", 1.0e3},
                   {"mo", "Megaohms", 1.0e6},    {"f", "Farads", 1.0e12},
                   {"uf", "Microfarads", 1.0e3}, {"nf", "Nanofarads", 1.0},
                   {"pf", "Picofarads", 1.0e-3}, {"h", "Henries", 1.0e3},
                   {"mh", "Millihenries", 1.0},  {"uh", "Microhenries", 1.0e-3}};
-
-char *str_to_lower(const char *str) {
-  size_t len = strlen(str);
-  char *lower = malloc(len + 1);
-  if (!lower) {
-    fprintf(stderr, "[ERROR]: Memory Allocation Failure\n");
-    exit(EXIT_FAILURE);
-  }
-  for (size_t i = 0; i < len; ++i) {
-    lower[i] = (char)tolower((unsigned char)str[i]);
-  }
-  lower[len] = '\0';
-  return lower;
-}
 
 double get_conversion_factor(const char *unit) {
   char *lower_unit = str_to_lower(unit);
@@ -123,7 +109,8 @@ circuit *add_comp(circuit *circuit, const char *name, comp_type type,
   return circuit;
 }
 
-circuit *init_circuit(uint32_t capacity, uint32_t voltage) {
+circuit *init_circuit(uint32_t capacity, const double voltage,
+                      const uint8_t voltage_type) {
   circuit *circuit = malloc(sizeof(*circuit));
   if (!circuit) {
     fprintf(stderr, "[ERROR]: Memory Initialization Failure");
@@ -135,6 +122,7 @@ circuit *init_circuit(uint32_t capacity, uint32_t voltage) {
     free(circuit);
     exit(EXIT_FAILURE);
   }
+
   circuit->size = 0;
   circuit->capacity = capacity;
   circuit->voltage = voltage;
@@ -143,6 +131,7 @@ circuit *init_circuit(uint32_t capacity, uint32_t voltage) {
   circuit->total_capacitance = 0;
   circuit->power = 0;
   circuit->current = 0;
+  circuit->voltage_type = voltage_type;
   return circuit;
 }
 
@@ -156,66 +145,74 @@ void free_circuit(circuit *circuit) {
 }
 
 void calc_circuit_info(circuit *circuit) {
-  double reciprocal_sum = 0;
-  for (size_t i = 0; i < circuit->size; ++i) {
-    switch (circuit->array[i].type) {
-    case RESISTOR:
-      circuit->total_resistance +=
-          convert_units(circuit->array[i].value, circuit->array[i].unit);
-      break;
-    case CAPACITOR:
-      reciprocal_sum +=
-          1.0 / convert_units(circuit->array[i].value, circuit->array[i].unit);
-      break;
-    case INDUCTOR:
-      circuit->total_inductance +=
-          convert_units(circuit->array[i].value, circuit->array[i].unit);
-      break;
+  // DC will be a 1
+  if (circuit->voltage_type) {
+    double reciprocal_sum = 0;
+    for (size_t i = 0; i < circuit->size; ++i) {
+      switch (circuit->array[i].type) {
+      case RESISTOR:
+        circuit->total_resistance +=
+            convert_units(circuit->array[i].value, circuit->array[i].unit);
+        break;
+      case CAPACITOR:
+        reciprocal_sum += 1.0 / convert_units(circuit->array[i].value,
+                                              circuit->array[i].unit);
+        break;
+      case INDUCTOR:
+        circuit->total_inductance +=
+            convert_units(circuit->array[i].value, circuit->array[i].unit);
+        break;
+      }
     }
-  }
-  if (reciprocal_sum > 0) {
-    circuit->total_capacitance = 1.0 / reciprocal_sum;
-  } else {
-    circuit->total_capacitance = 0;
-  }
+    if (reciprocal_sum > 0) {
+      circuit->total_capacitance = 1.0 / reciprocal_sum;
+    } else {
+      circuit->total_capacitance = 0;
+    }
 
-  if (circuit->total_resistance == 0) {
-    circuit->total_resistance = 1;
-  }
-  circuit->current = circuit->voltage / circuit->total_resistance;
-  circuit->power =
-      (circuit->voltage * circuit->voltage) / circuit->total_resistance;
-  double resistance = 0;
-  double capacitance = 0;
-  double inductance = 0;
-  for (size_t i = 0; i < circuit->size; ++i) {
-    switch (circuit->array[i].type) {
-    case RESISTOR:
-      resistance =
-          convert_units(circuit->array[i].value, circuit->array[i].unit);
-      circuit->array[i].comp.resistor.voltage_drop =
-          circuit->current * resistance;
-      circuit->array[i].comp.resistor.power_dissipation =
-          (circuit->voltage * circuit->voltage) / resistance;
-      break;
-    case CAPACITOR:
-      capacitance =
-          convert_units(circuit->array[i].value, circuit->array[i].unit);
-      circuit->array[i].comp.capacitor.charge = capacitance * circuit->voltage;
-      circuit->array[i].comp.capacitor.voltage_across =
-          circuit->array[i].comp.capacitor.charge / capacitance;
-      circuit->array[i].comp.capacitor.energy_stored =
-          (.5 * capacitance * (circuit->voltage * circuit->voltage) * .000001);
-      break;
-    case INDUCTOR:
-      inductance =
-          convert_units(circuit->array[i].value, circuit->array[i].unit) *
-          1.0e-3;
-      circuit->array[i].comp.inductor.energy_stored =
-          (0.5 * inductance * (circuit->current * circuit->current)) * 1000.0;
-      circuit->array[i].comp.inductor.voltage_across = 0;
-      break;
+    if (circuit->total_resistance == 0) {
+      circuit->total_resistance = 1;
     }
+    circuit->current = circuit->voltage / circuit->total_resistance;
+    circuit->power =
+        (circuit->voltage * circuit->voltage) / circuit->total_resistance;
+    double resistance = 0;
+    double capacitance = 0;
+    double inductance = 0;
+    for (size_t i = 0; i < circuit->size; ++i) {
+      switch (circuit->array[i].type) {
+      case RESISTOR:
+        resistance =
+            convert_units(circuit->array[i].value, circuit->array[i].unit);
+        circuit->array[i].comp.resistor.voltage_drop =
+            circuit->current * resistance;
+        circuit->array[i].comp.resistor.power_dissipation =
+            (circuit->voltage * circuit->voltage) / resistance;
+        break;
+      case CAPACITOR:
+        capacitance =
+            convert_units(circuit->array[i].value, circuit->array[i].unit);
+        circuit->array[i].comp.capacitor.charge =
+            capacitance * circuit->voltage;
+        circuit->array[i].comp.capacitor.voltage_across =
+            circuit->array[i].comp.capacitor.charge / capacitance;
+        circuit->array[i].comp.capacitor.energy_stored =
+            (.5 * capacitance * (circuit->voltage * circuit->voltage) *
+             .000001);
+        break;
+      case INDUCTOR:
+        inductance =
+            convert_units(circuit->array[i].value, circuit->array[i].unit) *
+            1.0e-3;
+        circuit->array[i].comp.inductor.energy_stored =
+            (0.5 * inductance * (circuit->current * circuit->current)) * 1000.0;
+        circuit->array[i].comp.inductor.voltage_across = 0;
+        break;
+      }
+    }
+  }
+  // AC will be a 0
+  else {
   }
 }
 
@@ -233,7 +230,7 @@ void print_comps(circuit *circuit) {
       break;
     case CAPACITOR:
       printf(
-          "Name: %s, Type: %s, Value: %.2f %s, Energy Stored: %.4f Milijoules, "
+          "Name: %s, Type: %s, Value: %.2f %s, Energy Stored: %.6f Milijoules, "
           "Charge: %.2f Nanocoulombs, "
           "Voltage Across: %.2f Volts\n",
           circuit->array[i].name, comp_names[circuit->array[i].type],

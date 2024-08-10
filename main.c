@@ -1,21 +1,43 @@
 #include "circuit.h"
+#include "extras.h"
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-const uint32_t voltage = 5; // DC Voltage
+/*
+ *
+ * File Format:
+ * <VOLTAGE_VALUE>:<AC/DC>
+ * <COMPONENT>:<NAME>:<VALUE>:<UNIT>
+ *
+ * EX:
+ * 5:DC
+ * resistor:resistor1:200:O
+ *
+ */
 
-int main(void) {
-  circuit *circuit = init_circuit(5, voltage);
-  add_comp(circuit, "resistor1", RESISTOR, 200, "O");
-  add_comp(circuit, "resistor2", RESISTOR, 220, "o");
-  add_comp(circuit, "resistor3", RESISTOR, 300, "o");
-  add_comp(circuit, "capacitor1", CAPACITOR, 10, "nf");
-  add_comp(circuit, "capacitor2", CAPACITOR, 22, "nf");
-  add_comp(circuit, "capacitor3", CAPACITOR, 20, "Uf");
-  add_comp(circuit, "indcuctor1", INDUCTOR, 1000, "mH");
-  add_comp(circuit, "indcuctor2", INDUCTOR, 200, "H");
+// eventually i will add a gui component so ill probabaly change it so it will
+// no longer accept a file unless i have two versions one with a gui and one
+// without idk yet
+int32_t main(int32_t argc, char *argv[]) {
+  if (argc != 2) {
+    fprintf(stderr, "[ERROR]: Must Provide File Path as an Argument\n");
+    exit(EXIT_FAILURE);
+  }
+
+  FILE *file = fopen(argv[1], "r");
+  if (!file) {
+    fprintf(stderr, "[ERROR]: File Could not be Opened\n");
+    exit(EXIT_FAILURE);
+  }
+  circuit *circuit = file_parse(file);
+  if (!circuit) {
+    fprintf(stderr, "[ERROR]: Circuit Initialization Error\n");
+    exit(EXIT_FAILURE);
+  }
   calc_circuit_info(circuit);
   print_comps(circuit);
   print_circuit_info(circuit);
   free_circuit(circuit);
-  return 0;
+  exit(EXIT_SUCCESS);
 }
